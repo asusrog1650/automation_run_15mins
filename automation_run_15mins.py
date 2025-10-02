@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
-import ccxt
-import yfinance as yf
-from datetime import datetime, timedelta
+import cryptocompare
+# from datetime import datetime, timedelta
+import datetime
 import time
 import smtplib
 from email.mime.text import MIMEText
@@ -13,73 +13,113 @@ warnings.filterwarnings('ignore')
 print("Starting crypto trading strategy script...")
 
 class DataFetcher:
-    def __init__(self):
-        print("Initializing DataFetcher...")
-        self.exchange = ccxt.binance({
-            'enableRateLimit': True,
-            'options': {'defaultType': 'spot'}
-        })
-
-    def fetch_crypto_data_15min(self, symbol, days_back=5, verbose=True):
-        """Fetch all 15-minute candle data for the given symbol and days_back (paginated)"""
-        print(f"Fetching data for {symbol}...")
-        since = self.exchange.milliseconds() - days_back * 24 * 60 * 60 * 1000
-        all_ohlcv = []
-        limit = 1000  # Binance max per call for 15m
-        max_attempts = 5
+    def __init__(self, api_key=None):
+        """
+        Initialize DataFetcher with optional CryptoCompare API key
+        Set your API key using: cryptocompare.cryptocompare._set_api_key_parameter(your_key)
+        """
+        if api_key:
+            cryptocompare.cryptocompare._set_api_key_parameter('8d83c0d2fa1d6ba508a0c512987c8340867a1f8f2403e73d033aa880a6341f2e')
+    
+    def fetch_crypto_data_15min(self, symbol, days_back=12, verbose=True):
+        """
+        Fetch 15-minute candle data using CryptoCompare API
+        Note: CryptoCompare minute endpoint requires aggregation parameter for 15min intervals
+        """
+        # Extract base currency from symbol (e.g., 'BTCUSDT' -> 'BTC')
+        base_currency = symbol.replace('USDT', '').replace('BUSD', '')
+        quote_currency = 'USDT'
         
-        try:
-            while True:
-                for attempt in range(max_attempts):
-                    try:
-                        ohlcv = self.exchange.fetch_ohlcv(symbol, '15m', since, limit=limit)
-                        break
-                    except Exception as e:
-                        if verbose:
-                            print(f"Error fetching {symbol} data, attempt {attempt+1}: {e}")
-                        time.sleep(2)
-                else:
-                    print(f"Max attempts reached for {symbol}. Stopping fetch.")
+        # Calculate total minutes needed
+        minutes_needed = days_back * 24 * 60
+        # For 15-min intervals, divide by 15
+        candles_needed = minutes_needed // 15
+        
+        # CryptoCompare limit per call (max 2000)
+        limit_per_call = 2000
+        all_data = []
+        
+        # Calculate how many API calls needed
+        num_calls = (candles_needed // limit_per_call) + 1
+        
+        # Start from current time and go backwards
+        to_timestamp = int(time.time())
+        
+        for call_num in range(num_calls):
+            try:
+                # Fetch minute data with aggregate=15 for 15-minute intervals
+                data = cryptocompare.get_historical_price_minute(
+                    base_currency, 
+                    currency=quote_currency, 
+                    limit=min(limit_per_call, candles_needed - len(all_data)),
+                    toTs=to_timestamp,
+                    exchange='binance'
+                )
+                
+                if not data:
+                    if verbose:
+                        print(f"No data returned for {symbol} at timestamp {to_timestamp}")
                     break
-
-                if not ohlcv:
-                    break
-
-                all_ohlcv += ohlcv
-                if len(ohlcv) < limit:
-                    break
-                since = ohlcv[-1][0] + 1  # next batch
+                
+                # Add to results
+                all_data = data + all_data  # Prepend older data
+                
                 if verbose:
-                    print(f"Fetched {len(all_ohlcv)} rows for {symbol} so far...")
+                    print(f"Fetched {len(data)} candles for {symbol}, total: {len(all_data)}")
+                
+                # Check if we got all needed data
+                if len(all_data) >= candles_needed or len(data) < limit_per_call:
+                    break
+                
+                # Update timestamp for next batch (go further back in time)
+                to_timestamp = data[0]['time'] - 1
+                
+                # Rate limiting
                 time.sleep(0.2)
-
-            if not all_ohlcv:
-                print(f"No data from Binance for {symbol}, falling back to yfinance...")
-                # Map symbols for yfinance
-                yf_symbol_map = {
-                    'BTCUSDT': 'BTC-USD',
-                    'ETHUSDT': 'ETH-USD',
-                    'SOLUSDT': 'SOL-USD'
-                }
-                yf_symbol = yf_symbol_map.get(symbol, symbol.replace('USDT', '-USD'))
-                crypto = yf.download(yf_symbol, period=f'{days_back}d', interval='15m')
-                crypto.columns = [col.lower() for col in crypto.columns]
-                crypto['token_volume'] = crypto['volume'] / crypto['close']
-                return crypto
-
-            df = pd.DataFrame(all_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-            df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms')
-            df.set_index('datetime', inplace=True)
-            df = df[['open', 'high', 'low', 'close', 'volume']]
-            df['token_volume'] = df['volume'] / df['close']
-            
-            print(f"{symbol} - Data shape: {df.shape}")
-            print(f"{symbol} - Date range: {df.index[0]} to {df.index[-1]}")
-            
-            return df
-        except Exception as e:
-            print(f"Error in fetch_crypto_data_15min for {symbol}: {e}")
-            return None
+                
+            except Exception as e:
+                if verbose:
+                    print(f"Error fetching {symbol} data: {e}")
+                break
+        
+        if not all_data:
+            if verbose:
+                print(f"No data available from CryptoCompare for {symbol}")
+            return pd.DataFrame()
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(all_data)
+        
+        # Process the data
+        df['datetime'] = pd.to_datetime(df['time'], unit='s')
+        df.set_index('datetime', inplace=True)
+        
+        # Keep only necessary columns and rename to match your format
+        # CryptoCompare uses 'volumeto' for quote volume
+        df = df[['open', 'high', 'low', 'close', 'volumeto']].copy()
+        df.rename(columns={'volumeto': 'volume'}, inplace=True)
+        
+        # Resample to 15-minute intervals if needed
+        df = df.resample('15min').agg({
+            'open': 'first',
+            'high': 'max',
+            'low': 'min',
+            'close': 'last',
+            'volume': 'sum'
+        }).dropna()
+        
+        # Calculate token volume
+        df['token_volume'] = df['volume'] / df['close']
+        
+        # Filter to exact days_back period
+        cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_back)
+        df = df[df.index >= cutoff_date]
+        
+        if verbose:
+            print(f"Final dataset: {len(df)} rows for {symbol}")
+            print(f"Date range: {df.index.min()} to {df.index.max()}")
+        
+        return df
 
 def calculate_relative_strength(data_dict, tickers, rs_length):
     """Calculate percentage gains for relative strength chart (like Pine Script)"""
@@ -485,11 +525,11 @@ def send_signal_email(signals_df):
     print("Checking for recent signals to send email...")
     try:
         # Set current time
-        current_time = datetime(2025, 10, 1, 8, 36, 0)
-        # current_time = datetime.now()
+        # current_time = datetime.datetime(2025, 10, 1, 8, 36, 0)
+        current_time = datetime.datetime.now()
         
         # Filter signals from the last 20 minutes
-        time_threshold = current_time - timedelta(minutes=20)
+        time_threshold = current_time - datetime.timedelta(minutes=30)
         recent_signals = signals_df[pd.to_datetime(signals_df['timestamp']) > time_threshold]
         
         if len(recent_signals) > 0:
@@ -497,7 +537,6 @@ def send_signal_email(signals_df):
             # Email configuration
             sender_email = "asusrog1650@gmail.com"  # Replace with your Gmail
             receiver_email = "asusrog1650@gmail.com"  # Replace with recipient email
-            # receiver_email = "7700907785@airtelmail.com"  # Replace with recipient email
             password = "fbcsuqwthwtjwgmw"  # Use an app password for Gmail
             
             # Create message
@@ -511,7 +550,7 @@ def send_signal_email(signals_df):
             
             for _, row in recent_signals.iterrows():
                 # Add IST time (UTC+5:30)
-                ist_time = pd.to_datetime(row['timestamp']) + timedelta(hours=5, minutes=30)
+                ist_time = pd.to_datetime(row['timestamp']) + datetime.timedelta(hours=5, minutes=30)
                 body += f"Crypto: {row['crypto']}\n"
                 body += f"Signal: {row['signal_type']}\n"
                 body += f"Time (IST): {ist_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -543,27 +582,36 @@ def send_signal_email(signals_df):
 def main():
     try:
         print("Starting main execution...")
+
+        # Initialize the DataFetcher
+        fetcher = DataFetcher()  # Optional: add your CryptoCompare API key
+
         # Parameters
         tickers = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
         high_length = 50
         stock_ema_length = 200
-        days_back = 5  # Change as needed for more/less data
-        rs_length = 100  # Length for relative strength calculation (like Pine Script)
+        days_back = 100  # Now actively used for fetching data
+        rs_length = 100  # Length for relative strength calculation
 
-        # Fetch data
-        fetcher = DataFetcher()
         crypto_data = {}
 
         for ticker in tickers:
-            data = fetcher.fetch_crypto_data_15min(ticker, days_back=days_back)
-            if data is not None:
+            print(f"\nFetching data for {ticker}...")
+            try:
+                data = fetcher.fetch_crypto_data_15min(ticker, days_back=days_back, verbose=True)
+                
+                if data.empty:
+                    print(f"Warning: No data returned for {ticker}")
+                    continue
+                    
                 crypto_data[ticker] = data
-            else:
-                print(f"Failed to fetch data for {ticker}, skipping...")
-
-        if len(crypto_data) < len(tickers):
-            print("Error: Could not fetch data for all tickers")
-            return
+                print(f"{ticker} - Data shape: {data.shape}")
+                print(f"{ticker} - Date range: {data.index[0]} to {data.index[-1]}")
+                print(f"{ticker} - Columns: {list(data.columns)}")
+                
+            except Exception as e:
+                print(f"Error fetching {ticker}: {e}")
+                continue
 
         print("\nAll cryptocurrency data fetched successfully!")
 
