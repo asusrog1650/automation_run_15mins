@@ -525,8 +525,8 @@ def send_signal_email(signals_df):
     print("Checking for recent signals to send email...")
     try:
         # Set current time
-        # current_time = datetime.datetime(2025, 10, 1, 8, 36, 0)
-        current_time = datetime.datetime.now()
+        current_time = datetime.datetime(2025, 10, 1, 8, 36, 0)
+        # current_time = datetime.datetime.now()
         
         # Filter signals from the last 20 minutes
         time_threshold = current_time - datetime.timedelta(minutes=30)
