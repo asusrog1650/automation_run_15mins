@@ -2,7 +2,7 @@ name: automation_bot_15mins
 
 on:
   schedule:
-    - cron: "15 1 * * *"
+    - cron: "1,16,31,46 * * * *"
   workflow_dispatch:
 
 env:
