@@ -396,43 +396,68 @@ def generate_signals(data, pivot_high_indexes, pivot_low_indexes, ticker, rs_dat
                 #             print(f"Error in RS validation for BUY {ticker}: {e}")
                 #             rs_ok = False
 
-                # Relative strength validation for BTCUSDT, ETHUSDT, and SOLUSDT
+                # # Relative strength validation for BTCUSDT, ETHUSDT, and SOLUSDT
+                # rs_ok = True
+                # current_time = data_reset.loc[i, 'datetime']
+    
+                # if ticker == 'BTCUSDT':
+                #     rs_ok = False
+                #     if (rs_data_used is not None) and (current_time in rs_data_used.index):
+                #         try:
+                #             btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
+                #             eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
+                #             sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
+                #             rs_ok = (btc_gain >= eth_gain) and (btc_gain >= sol_gain)
+                #         except Exception:
+                #             rs_ok = False
+    
+                # elif ticker == 'ETHUSDT':
+                #     rs_ok = False
+                #     if (rs_data_used is not None) and (current_time in rs_data_used.index):
+                #         try:
+                #             btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
+                #             eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
+                #             sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
+                #             rs_ok = (eth_gain >= btc_gain) and (eth_gain >= sol_gain)
+                #         except Exception:
+                #             rs_ok = False
+    
+                # elif ticker == 'SOLUSDT':
+                #     rs_ok = False
+                #     if (rs_data_used is not None) and (current_time in rs_data_used.index):
+                #         try:
+                #             btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
+                #             eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
+                #             sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
+                #             rs_ok = (sol_gain >= btc_gain) and (sol_gain >= eth_gain)
+                #         except Exception:
+                #             rs_ok = False
+                            
+                # if (crossover_long or cross_gap_long) and anchor_high_valid and crossed_below and rs_ok:
+                #     buy_indexes.append(data_reset.loc[i, 'datetime'])
+                #     is_plotable[i] = 1
+                #     break
+
+                # Define ticker mapping for validation
+                TRACKED_TICKERS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT']
+
+                # Relative strength validation
                 rs_ok = True
                 current_time = data_reset.loc[i, 'datetime']
-    
-                if ticker == 'BTCUSDT':
+
+                if ticker in TRACKED_TICKERS and rs_data_used is not None and current_time in rs_data_used.index:
+                    try:
+                        # Extract all gains at once
+                        gains = {t: rs_data_used.loc[current_time, f'{t}_gain'] for t in TRACKED_TICKERS}
+                        
+                        # Check if current ticker has the highest gain
+                        current_gain = gains[ticker]
+                        rs_ok = all(current_gain >= gain for t, gain in gains.items() if t != ticker)
+                    except Exception:
+                        rs_ok = False
+                elif ticker in TRACKED_TICKERS:
                     rs_ok = False
-                    if (rs_data_used is not None) and (current_time in rs_data_used.index):
-                        try:
-                            btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
-                            eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
-                            sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
-                            rs_ok = (btc_gain >= eth_gain) and (btc_gain >= sol_gain)
-                        except Exception:
-                            rs_ok = False
-    
-                elif ticker == 'ETHUSDT':
-                    rs_ok = False
-                    if (rs_data_used is not None) and (current_time in rs_data_used.index):
-                        try:
-                            btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
-                            eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
-                            sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
-                            rs_ok = (eth_gain >= btc_gain) and (eth_gain >= sol_gain)
-                        except Exception:
-                            rs_ok = False
-    
-                elif ticker == 'SOLUSDT':
-                    rs_ok = False
-                    if (rs_data_used is not None) and (current_time in rs_data_used.index):
-                        try:
-                            btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
-                            eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
-                            sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
-                            rs_ok = (sol_gain >= btc_gain) and (sol_gain >= eth_gain)
-                        except Exception:
-                            rs_ok = False
-                            
+
                 if (crossover_long or cross_gap_long) and anchor_high_valid and crossed_below and rs_ok:
                     buy_indexes.append(data_reset.loc[i, 'datetime'])
                     is_plotable[i] = 1
@@ -487,43 +512,68 @@ def generate_signals(data, pivot_high_indexes, pivot_low_indexes, ticker, rs_dat
                 #             print(f"Error in RS validation for SELL {ticker}: {e}")
                 #             rs_ok = False
 
-                # Relative strength validation for BTCUSDT, ETHUSDT, and SOLUSDT
+                # # Relative strength validation for BTCUSDT, ETHUSDT, and SOLUSDT
+                # rs_ok = True
+                # current_time = data_reset.loc[i, 'datetime']
+    
+                # if ticker == 'BTCUSDT':
+                #     rs_ok = False
+                #     if (rs_data_used is not None) and (current_time in rs_data_used.index):
+                #         try:
+                #             btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
+                #             eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
+                #             sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
+                #             rs_ok = (btc_gain <= eth_gain) and (btc_gain <= sol_gain)
+                #         except Exception:
+                #             rs_ok = False
+    
+                # elif ticker == 'ETHUSDT':
+                #     rs_ok = False
+                #     if (rs_data_used is not None) and (current_time in rs_data_used.index):
+                #         try:
+                #             btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
+                #             eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
+                #             sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
+                #             rs_ok = (eth_gain <= btc_gain) and (eth_gain <= sol_gain)
+                #         except Exception:
+                #             rs_ok = False
+    
+                # elif ticker == 'SOLUSDT':
+                #     rs_ok = False
+                #     if (rs_data_used is not None) and (current_time in rs_data_used.index):
+                #         try:
+                #             btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
+                #             eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
+                #             sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
+                #             rs_ok = (sol_gain <= btc_gain) and (sol_gain <= eth_gain)
+                #         except Exception:
+                #             rs_ok = False
+                            
+                # if (crossover_short or cross_gap_short) and anchor_low_valid and crossed_above and rs_ok:
+                #     sell_indexes.append(data_reset.loc[i, 'datetime'])
+                #     is_plotable[i] = 1
+                #     break
+
+                # Define tracked tickers
+                TRACKED_TICKERS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT']
+
+                # Relative strength validation for short signals
                 rs_ok = True
                 current_time = data_reset.loc[i, 'datetime']
-    
-                if ticker == 'BTCUSDT':
+
+                if ticker in TRACKED_TICKERS and rs_data_used is not None and current_time in rs_data_used.index:
+                    try:
+                        # Extract all gains at once
+                        gains = {t: rs_data_used.loc[current_time, f'{t}_gain'] for t in TRACKED_TICKERS}
+                        
+                        # Check if current ticker has the LOWEST gain (weakness for short signal)
+                        current_gain = gains[ticker]
+                        rs_ok = all(current_gain <= gain for t, gain in gains.items() if t != ticker)
+                    except Exception:
+                        rs_ok = False
+                elif ticker in TRACKED_TICKERS:
                     rs_ok = False
-                    if (rs_data_used is not None) and (current_time in rs_data_used.index):
-                        try:
-                            btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
-                            eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
-                            sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
-                            rs_ok = (btc_gain <= eth_gain) and (btc_gain <= sol_gain)
-                        except Exception:
-                            rs_ok = False
-    
-                elif ticker == 'ETHUSDT':
-                    rs_ok = False
-                    if (rs_data_used is not None) and (current_time in rs_data_used.index):
-                        try:
-                            btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
-                            eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
-                            sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
-                            rs_ok = (eth_gain <= btc_gain) and (eth_gain <= sol_gain)
-                        except Exception:
-                            rs_ok = False
-    
-                elif ticker == 'SOLUSDT':
-                    rs_ok = False
-                    if (rs_data_used is not None) and (current_time in rs_data_used.index):
-                        try:
-                            btc_gain = rs_data_used.loc[current_time, 'BTCUSDT_gain']
-                            eth_gain = rs_data_used.loc[current_time, 'ETHUSDT_gain']
-                            sol_gain = rs_data_used.loc[current_time, 'SOLUSDT_gain']
-                            rs_ok = (sol_gain <= btc_gain) and (sol_gain <= eth_gain)
-                        except Exception:
-                            rs_ok = False
-                            
+
                 if (crossover_short or cross_gap_short) and anchor_low_valid and crossed_above and rs_ok:
                     sell_indexes.append(data_reset.loc[i, 'datetime'])
                     is_plotable[i] = 1
@@ -663,7 +713,7 @@ def main():
         fetcher = DataFetcher()  # Optional: add your CryptoCompare API key
 
         # Parameters
-        tickers = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
+        tickers = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT','BNBUSDT','XRPUSDT']
         high_length = 50
         stock_ema_length = 200
         days_back = 100  # Now actively used for fetching data
@@ -743,6 +793,8 @@ def main():
         send_signal_email(signals_df)
         
         print("Script execution completed successfully!")
+
+        # print(signals_df.tail(10))
         
     except Exception as e:
         print(f"Error in main function: {e}")
