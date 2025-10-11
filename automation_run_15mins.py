@@ -438,26 +438,58 @@ def generate_signals(data, pivot_high_indexes, pivot_low_indexes, ticker, rs_dat
                 #     is_plotable[i] = 1
                 #     break
 
+                # # Define ticker mapping for validation
+                # TRACKED_TICKERS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT']
+
+                # # Relative strength validation
+                # rs_ok = True
+                # current_time = data_reset.loc[i, 'datetime']
+
+                # if ticker in TRACKED_TICKERS and rs_data_used is not None and current_time in rs_data_used.index:
+                #     try:
+                #         # Extract all gains at once
+                #         gains = {t: rs_data_used.loc[current_time, f'{t}_gain'] for t in TRACKED_TICKERS}
+                        
+                #         # Check if current ticker has the highest gain
+                #         current_gain = gains[ticker]
+                #         rs_ok = all(current_gain >= gain for t, gain in gains.items() if t != ticker)
+                #     except Exception:
+                #         rs_ok = False
+                # elif ticker in TRACKED_TICKERS:
+                #     rs_ok = False
+
+                # if (crossover_long or cross_gap_long) and anchor_high_valid and crossed_below and rs_ok:
+                #     buy_indexes.append(data_reset.loc[i, 'datetime'])
+                #     is_plotable[i] = 1
+                #     break
+
+        
                 # Define ticker mapping for validation
                 TRACKED_TICKERS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT']
-
+    
                 # Relative strength validation
                 rs_ok = True
                 current_time = data_reset.loc[i, 'datetime']
-
+    
                 if ticker in TRACKED_TICKERS and rs_data_used is not None and current_time in rs_data_used.index:
                     try:
                         # Extract all gains at once
                         gains = {t: rs_data_used.loc[current_time, f'{t}_gain'] for t in TRACKED_TICKERS}
                         
-                        # Check if current ticker has the highest gain
+                        # Get current ticker's gain
                         current_gain = gains[ticker]
-                        rs_ok = all(current_gain >= gain for t, gain in gains.items() if t != ticker)
+                        
+                        # Get the top 2 gain values across all tickers
+                        top_2_gains = sorted(gains.values(), reverse=True)[:2]
+                        
+                        # Check if current gain is in top 2
+                        rs_ok = current_gain in top_2_gains
+                        
                     except Exception:
                         rs_ok = False
                 elif ticker in TRACKED_TICKERS:
                     rs_ok = False
-
+    
                 if (crossover_long or cross_gap_long) and anchor_high_valid and crossed_below and rs_ok:
                     buy_indexes.append(data_reset.loc[i, 'datetime'])
                     is_plotable[i] = 1
@@ -554,26 +586,59 @@ def generate_signals(data, pivot_high_indexes, pivot_low_indexes, ticker, rs_dat
                 #     is_plotable[i] = 1
                 #     break
 
+                # # Define tracked tickers
+                # TRACKED_TICKERS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT']
+
+                # # Relative strength validation for short signals
+                # rs_ok = True
+                # current_time = data_reset.loc[i, 'datetime']
+
+                # if ticker in TRACKED_TICKERS and rs_data_used is not None and current_time in rs_data_used.index:
+                #     try:
+                #         # Extract all gains at once
+                #         gains = {t: rs_data_used.loc[current_time, f'{t}_gain'] for t in TRACKED_TICKERS}
+                        
+                #         # Check if current ticker has the LOWEST gain (weakness for short signal)
+                #         current_gain = gains[ticker]
+                #         rs_ok = all(current_gain <= gain for t, gain in gains.items() if t != ticker)
+                #     except Exception:
+                #         rs_ok = False
+                # elif ticker in TRACKED_TICKERS:
+                #     rs_ok = False
+
+                # if (crossover_short or cross_gap_short) and anchor_low_valid and crossed_above and rs_ok:
+                #     sell_indexes.append(data_reset.loc[i, 'datetime'])
+                #     is_plotable[i] = 1
+                #     break
+
+
+        
                 # Define tracked tickers
                 TRACKED_TICKERS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT']
-
+    
                 # Relative strength validation for short signals
                 rs_ok = True
                 current_time = data_reset.loc[i, 'datetime']
-
+    
                 if ticker in TRACKED_TICKERS and rs_data_used is not None and current_time in rs_data_used.index:
                     try:
                         # Extract all gains at once
                         gains = {t: rs_data_used.loc[current_time, f'{t}_gain'] for t in TRACKED_TICKERS}
                         
-                        # Check if current ticker has the LOWEST gain (weakness for short signal)
+                        # Get current ticker's gain
                         current_gain = gains[ticker]
-                        rs_ok = all(current_gain <= gain for t, gain in gains.items() if t != ticker)
+                        
+                        # Get the bottom 2 gain values (weakest performers)
+                        bottom_2_gains = sorted(gains.values())[:2]
+                        
+                        # Check if current gain is in bottom 2 (weakest)
+                        rs_ok = current_gain in bottom_2_gains
+                        
                     except Exception:
                         rs_ok = False
                 elif ticker in TRACKED_TICKERS:
                     rs_ok = False
-
+    
                 if (crossover_short or cross_gap_short) and anchor_low_valid and crossed_above and rs_ok:
                     sell_indexes.append(data_reset.loc[i, 'datetime'])
                     is_plotable[i] = 1
