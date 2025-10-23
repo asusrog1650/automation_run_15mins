@@ -719,7 +719,7 @@ def send_signal_email(signals_df):
         # current_time = datetime.datetime(2025, 10, 1, 8, 36, 0)
         current_time = datetime.datetime.now()
         
-        # Filter signals from the last 20 minutes
+        # Filter signals from the last 30 minutes
         time_threshold = current_time - datetime.timedelta(minutes=30)
         recent_signals = signals_df[pd.to_datetime(signals_df['timestamp']) > time_threshold]
         
@@ -766,7 +766,7 @@ def send_signal_email(signals_df):
             except Exception as e:
                 print(f"Error sending email: {e}")
         else:
-            print("No recent signals in the last 20 minutes")
+            print("No recent signals in the last 30 minutes")
     except Exception as e:
         print(f"Error in send_signal_email: {e}")
 
@@ -859,7 +859,8 @@ def main():
         
         print("Script execution completed successfully!")
 
-        # print(signals_df.tail(10))
+        # print(signals_df.tail(5))
+        print(signals_df.assign(timestamp=pd.to_datetime(signals_df['timestamp']) + pd.Timedelta(hours=5, minutes=30)).tail(5))
         
     except Exception as e:
         print(f"Error in main function: {e}")
