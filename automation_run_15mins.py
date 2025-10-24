@@ -803,6 +803,9 @@ def main():
             except Exception as e:
                 print(f"Error fetching {ticker}: {e}")
                 continue
+                
+        for symbol in crypto_data:
+            crypto_data[symbol] = crypto_data[symbol].iloc[:-1]
 
         print("\nAll cryptocurrency data fetched successfully!")
 
