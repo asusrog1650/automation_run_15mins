@@ -712,23 +712,60 @@ def create_signals_dataframe(tickers, signals_data, processed_data):
         return pd.DataFrame()
 
 def send_signal_email(signals_df):
-    """Send email notification for recent signals (within last 20 minutes)"""
-    print("Checking for recent signals to send email...")
+    """Send email notification only for new signals not in last_signals.csv"""
+    print("Checking for new signals to send email...")
     try:
-        # Set current time
-        # current_time = datetime.datetime(2025, 10, 1, 8, 36, 0)
-        current_time = datetime.datetime.now()
+        import os
         
-        # Filter signals from the last 30 minutes
-        time_threshold = current_time - datetime.timedelta(minutes=30)
-        recent_signals = signals_df[pd.to_datetime(signals_df['timestamp']) > time_threshold]
+        # Get the last 5 signals from current run
+        current_signals = signals_df.tail(5).copy()
         
-        if len(recent_signals) > 0:
-            print(f"Found {len(recent_signals)} recent signals, preparing email...")
+        # Path to the CSV file
+        csv_file = "last_signals.csv"
+        
+        # Check if the CSV file exists
+        if os.path.exists(csv_file):
+            # Read the previous signals
+            try:
+                previous_signals = pd.read_csv(csv_file)
+                previous_signals['timestamp'] = pd.to_datetime(previous_signals['timestamp'])
+                print(f"Loaded {len(previous_signals)} previous signals from {csv_file}")
+            except Exception as e:
+                print(f"Error reading CSV file: {e}")
+                previous_signals = pd.DataFrame()
+        else:
+            print(f"{csv_file} not found. Creating new file.")
+            previous_signals = pd.DataFrame()
+        
+        # Find new signals by comparing timestamps and crypto+signal_type combinations
+        if not previous_signals.empty:
+            # Create unique identifiers for comparison
+            previous_signals['signal_id'] = (
+                previous_signals['crypto'].astype(str) + '_' + 
+                previous_signals['timestamp'].astype(str) + '_' + 
+                previous_signals['signal_type'].astype(str)
+            )
+            current_signals['signal_id'] = (
+                current_signals['crypto'].astype(str) + '_' + 
+                current_signals['timestamp'].astype(str) + '_' + 
+                current_signals['signal_type'].astype(str)
+            )
+            
+            # Find new signals not in previous data
+            new_signals = current_signals[~current_signals['signal_id'].isin(previous_signals['signal_id'])].copy()
+            new_signals = new_signals.drop(columns=['signal_id'])
+        else:
+            # If no previous signals, all current signals are new
+            new_signals = current_signals.copy()
+        
+        # Send email only if there are new signals
+        if len(new_signals) > 0:
+            print(f"Found {len(new_signals)} new signals, preparing email...")
+            
             # Email configuration
-            sender_email = "asusrog1650@gmail.com"  # Replace with your Gmail
-            receiver_email = "asusrog1650@gmail.com"  # Replace with recipient email
-            password = "fbcsuqwthwtjwgmw"  # Use an app password for Gmail
+            sender_email = "asusrog1650@gmail.com"
+            receiver_email = "asusrog1650@gmail.com"
+            password = "fbcsuqwthwtjwgmw"
             
             # Create message
             message = MIMEMultipart()
@@ -736,10 +773,10 @@ def send_signal_email(signals_df):
             message["To"] = receiver_email
             message["Subject"] = "Crypto Trading Signal Alert"
             
-            # Create email body with signals
-            body = "Recent Trading Signals:\n\n"
+            # Create email body with new signals
+            body = "New Trading Signals:\n\n"
             
-            for _, row in recent_signals.iterrows():
+            for _, row in new_signals.iterrows():
                 # Add IST time (UTC+5:30)
                 ist_time = pd.to_datetime(row['timestamp']) + datetime.timedelta(hours=5, minutes=30)
                 body += f"Crypto: {row['crypto']}\n"
@@ -759,14 +796,20 @@ def send_signal_email(signals_df):
                 # Send email
                 text = message.as_string()
                 server.sendmail(sender_email, receiver_email, text)
-                print(f"Email alert sent for {len(recent_signals)} recent signals")
+                print(f"Email alert sent for {len(new_signals)} new signals")
                 
                 # Close connection
                 server.quit()
             except Exception as e:
                 print(f"Error sending email: {e}")
         else:
-            print("No recent signals in the last 30 minutes")
+            print("No new signals found. Email not sent.")
+        
+        # Update the CSV file with the latest 5 signals
+        current_signals_clean = current_signals.drop(columns=['signal_id'], errors='ignore')
+        current_signals_clean.to_csv(csv_file, index=False)
+        print(f"Updated {csv_file} with latest {len(current_signals_clean)} signals")
+        
     except Exception as e:
         print(f"Error in send_signal_email: {e}")
 
