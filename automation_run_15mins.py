@@ -715,27 +715,36 @@ def send_signal_email(signals_df):
     """Send email notification only for new signals not in last_signals.csv"""
     print("Checking for new signals to send email...")
     try:
-        import os
-        
         # Get the last 5 signals from current run
         current_signals = signals_df.tail(5).copy()
         
         # Path to the CSV file
         csv_file = "last_signals.csv"
         
-        # Check if the CSV file exists
-        if os.path.exists(csv_file):
-            # Read the previous signals
-            try:
-                previous_signals = pd.read_csv(csv_file)
-                previous_signals['timestamp'] = pd.to_datetime(previous_signals['timestamp'])
-                print(f"Loaded {len(previous_signals)} previous signals from {csv_file}")
-            except Exception as e:
-                print(f"Error reading CSV file: {e}")
-                previous_signals = pd.DataFrame()
-        else:
+        # Try to read the previous signals
+        try:
+            previous_signals = pd.read_csv(csv_file)
+            previous_signals['timestamp'] = pd.to_datetime(previous_signals['timestamp'])
+            print(f"Loaded {len(previous_signals)} previous signals from {csv_file}")
+            
+            # Print previous signals with IST timestamp
+            print("\nPrevious signals from CSV (IST):")
+            print(previous_signals.assign(
+                timestamp=pd.to_datetime(previous_signals['timestamp']) + pd.Timedelta(hours=5, minutes=30)
+            ))
+            
+        except FileNotFoundError:
             print(f"{csv_file} not found. Creating new file.")
             previous_signals = pd.DataFrame()
+        except Exception as e:
+            print(f"Error reading CSV file: {e}")
+            previous_signals = pd.DataFrame()
+        
+        # Print current signals with IST timestamp
+        print("\nCurrent signals (IST):")
+        print(signals_df.assign(
+            timestamp=pd.to_datetime(signals_df['timestamp']) + pd.Timedelta(hours=5, minutes=30)
+        ).tail(5))
         
         # Find new signals by comparing timestamps and crypto+signal_type combinations
         if not previous_signals.empty:
@@ -760,7 +769,13 @@ def send_signal_email(signals_df):
         
         # Send email only if there are new signals
         if len(new_signals) > 0:
-            print(f"Found {len(new_signals)} new signals, preparing email...")
+            print(f"\nFound {len(new_signals)} new signals, preparing email...")
+            
+            # Print new signals with IST timestamp
+            print("\nNew signals to be emailed (IST):")
+            print(new_signals.assign(
+                timestamp=pd.to_datetime(new_signals['timestamp']) + pd.Timedelta(hours=5, minutes=30)
+            ))
             
             # Email configuration
             sender_email = "asusrog1650@gmail.com"
@@ -803,15 +818,16 @@ def send_signal_email(signals_df):
             except Exception as e:
                 print(f"Error sending email: {e}")
         else:
-            print("No new signals found. Email not sent.")
+            print("\nNo new signals found. Email not sent.")
         
         # Update the CSV file with the latest 5 signals
         current_signals_clean = current_signals.drop(columns=['signal_id'], errors='ignore')
         current_signals_clean.to_csv(csv_file, index=False)
-        print(f"Updated {csv_file} with latest {len(current_signals_clean)} signals")
+        print(f"\nUpdated {csv_file} with latest {len(current_signals_clean)} signals")
         
     except Exception as e:
         print(f"Error in send_signal_email: {e}")
+
 
 def main():
     try:
