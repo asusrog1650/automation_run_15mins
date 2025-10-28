@@ -922,7 +922,7 @@ def main():
         print("Script execution completed successfully!")
 
         # print(signals_df.tail(5))
-        print(signals_df.assign(timestamp=pd.to_datetime(signals_df['timestamp']) + pd.Timedelta(hours=5, minutes=30)).tail(5))
+        # print(signals_df.assign(timestamp=pd.to_datetime(signals_df['timestamp']) + pd.Timedelta(hours=5, minutes=30)).tail(5))
         
     except Exception as e:
         print(f"Error in main function: {e}")
