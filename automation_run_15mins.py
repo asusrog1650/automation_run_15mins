@@ -763,6 +763,11 @@ def send_signal_email(signals_df):
             # Find new signals not in previous data
             new_signals = current_signals[~current_signals['signal_id'].isin(previous_signals['signal_id'])].copy()
             new_signals = new_signals.drop(columns=['signal_id'])
+
+            # Filter new signals to only include those from last 240 minutes
+            current_time = datetime.datetime.now()
+            time_threshold = current_time - datetime.timedelta(minutes=240)
+            new_signals = new_signals[pd.to_datetime(new_signals['timestamp']) > time_threshold]
         else:
             # If no previous signals, all current signals are new
             new_signals = current_signals.copy()
