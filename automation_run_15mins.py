@@ -480,7 +480,7 @@ def generate_signals(data, pivot_high_indexes, pivot_low_indexes, ticker, rs_dat
                         current_gain = gains[ticker]
                         
                         # Get the top 2 gain values across all tickers
-                        top_2_gains = sorted(gains.values(), reverse=True)[:2]
+                        top_2_gains = sorted(gains.values(), reverse=True)[:3]
                         
                         # Check if current gain is in top 2
                         rs_ok = current_gain in top_2_gains
@@ -629,7 +629,7 @@ def generate_signals(data, pivot_high_indexes, pivot_low_indexes, ticker, rs_dat
                         current_gain = gains[ticker]
                         
                         # Get the bottom 2 gain values (weakest performers)
-                        bottom_2_gains = sorted(gains.values())[:2]
+                        bottom_2_gains = sorted(gains.values())[:3]
                         
                         # Check if current gain is in bottom 2 (weakest)
                         rs_ok = current_gain in bottom_2_gains
